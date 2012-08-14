@@ -24,7 +24,6 @@ CONFIG_FILES = [
     os.path.expanduser("~/.fblessrc"),
 ]
 
-
 def typed_get(config, section, sectiondict, key, value):
     """ Get config value with given type
     """
@@ -67,7 +66,6 @@ def get_keys(keysgroup):
 def convert_color(colorname):
     """ Convert color names to numeric codes
     """
-
     try:
         return const.COLORS[colorname]
     except KeyError:
@@ -91,6 +89,8 @@ def parse_arguments():
                         help = 'go to the offset (in percent)')
     parser.add_argument('-e', '--edit', action = 'store_true',
                         help = 'open in the editor')
+    parser.add_argument('-c', '--config', metavar = 'file',
+                        help = 'use the specified configuration file')
     args = parser.parse_args()
 
     if args.file:
@@ -130,22 +130,27 @@ def parse_arguments():
     else:
         general['edit_xml'] = False
 
-# Let's load settings from config:
+    if args.config:
+        CONFIG_FILES.append(args.config)
 
+    parse_config()
 
-config = ConfigParser.RawConfigParser()
-config.read(CONFIG_FILES)
+def parse_config():
+    """Load settings from config
+    """
+    config = ConfigParser.RawConfigParser()
+    config.read(CONFIG_FILES)
 
-for d, section in (
-    [(globals(), section) for section in ['paths', 'general', 'keys']]
-    + [(styles, style) for style in styles]
-):
-    if config.has_section(section):
-        d[section].update([
-            (
-                key,
-                typed_get(config, section, d, key, value),
-            )
-            for (key, value) in config.items(section)
-            if key in d[section]
-        ])
+    for d, section in (
+        [(globals(), section) for section in ['paths', 'general', 'keys']]
+        + [(styles, style) for style in styles]
+    ):
+        if config.has_section(section):
+            d[section].update([
+                (
+                    key,
+                    typed_get(config, section, d, key, value),
+                )   
+                for (key, value) in config.items(section)
+                if key in d[section]
+            ])
