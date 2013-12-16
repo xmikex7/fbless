@@ -3,8 +3,8 @@
 import sys
 import locale
 
-from hyphenation import Hyphenation
-from options import styles, general
+from .hyphenation import Hyphenation
+from .options import styles, general
 
 default_charset = locale.getdefaultlocale()[1]
 hyph = Hyphenation()
@@ -70,7 +70,7 @@ attr = Attr()
 class Paragraph:
     def __init__(self, type='p', data='', attrs=[], lang=None,
                  id=None, byte_index=0):
-        #print 'attrs:', attrs
+        #print('attrs:', attrs)
         self.type = type
         self.data = data
         self.attrs = attrs
@@ -154,7 +154,7 @@ class Paragraph:
             offsets.append((end, attr.cancel_search))
         offsets.sort()                  # sort by offsets
 
-        #print offsets
+        #print(offsets)
 
         first_line_offset = self.first_line_indent
         words = [' ' * (self.first_line_indent - 1)]
@@ -238,13 +238,13 @@ class Paragraph:
             if self.justify == 'center':
                 len_line = sum(len(s) for s in ln
                                if not isinstance(s, (int, tuple)))
-                d = (max_len - len_line) / 2
-                spaces = ' ' * (self.left_indent + d)
+                d =  (max_len - len_line) / 2
+                spaces = ' ' * int(self.left_indent + d)
             elif self.justify == 'right':
                 len_line = sum(len(s) for s in ln
                                if not isinstance(s, (int, tuple)))
                 d = max_len - len_line
-                spaces = ' ' * (self.left_indent + d)
+                spaces = ' ' * int(self.left_indent + d)
             else:  # left or fill
                 spaces = ' ' * self.left_indent
 
@@ -263,7 +263,7 @@ class Paragraph:
 
 
 if __name__ == '__main__':
-    s = unicode(
+    s = str(
         'Давно было готово заглавие, использующее титул замечательной '
         'монографии :вана Аксенова "Пикассо и окрестности". Предрешен '
         'был и тот свободный жанр "филологического романа", в котором '
@@ -280,13 +280,13 @@ if __name__ == '__main__':
     par.split_string()
     for l in par.lines:
         if 0:
-            print l
+            print(l)
         elif 0:
             for w in l:
                 if w == ' ':
-                    print '<sp>'
+                    print('<sp>')
                 else:
-                    print w
+                    print(w)
         else:
             for w in l:
                 if isinstance(w, int):
@@ -295,17 +295,17 @@ if __name__ == '__main__':
                 elif isinstance(w, tuple):
                     sys.stdout.write('<|>')
                 else:
-                    #print w,
+                    #print(w),
                     #sys.stdout.write('|')
                     sys.stdout.write(w.encode('utf-8', 'replace'))
-            print
-    print '~' * (par.scr_cols - par.right_indent)
+            print()
+    print(('~' * (par.scr_cols - par.right_indent)))
 
     #par.print_str()
 ##     for s in par.lines:
 ##         if isinstance(s, int):
-##             print '>', s, '<'
+##             print('>', s, '<')
 ##         else:
 ##             for w in s:
-##                 print w,
-##             print
+##                 print(w),
+##             print()

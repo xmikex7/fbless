@@ -2,12 +2,13 @@
 """ Default options dicts and config files parser
 """
 import curses
-import ConfigParser
+import configparser
 import os
-import defaults
-import const 
 import sys
 import argparse
+
+from . import defaults
+from . import const 
 
 paths = dict(defaults.paths)
 general = dict(defaults.general)
@@ -75,7 +76,8 @@ def convert_color(colorname):
             return(colorname)
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description = 'fb2 console reader', version = const.VERSION)
+    parser = argparse.ArgumentParser(description = 'fb2 console reader')
+    
     parser.add_argument('file', nargs = '?',
                         help = 'fb2, zip, gzip or bzip2 file')
     parser.add_argument('-a', '--autoscroll', action = 'store_true',
@@ -91,6 +93,8 @@ def parse_arguments():
                         help = 'open in the editor')
     parser.add_argument('-c', '--config', metavar = 'file',
                         help = 'use the specified configuration file')
+
+    
     args = parser.parse_args()
 
     if args.file:
@@ -138,7 +142,7 @@ def parse_arguments():
 def parse_config():
     """Load settings from config
     """
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(CONFIG_FILES)
 
     for d, section in (

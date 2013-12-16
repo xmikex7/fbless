@@ -2,11 +2,11 @@
 
 import sys
 import string
-from cStringIO import StringIO
+from io import StringIO
 import xml.sax
 import xml.parsers.expat
 
-from paragraph import Paragraph, attr
+from .paragraph import Paragraph, attr
 
 
 class StopParsing(Exception):
@@ -79,7 +79,7 @@ class ContentHandler:
             data = ''.join(self.cur_data)
             if name in ['strong', 'emphasis', 'a', 'style']:
                 if not self.cur_attr:
-                    ##print 'FB2 PARSER ERROR: nested styles?'
+                    ##print ('FB2 PARSER ERROR: nested styles?')
                     return
                 self.cur_attr.insert(1, len(data))
                 self.attrs.append(self.cur_attr)
@@ -163,14 +163,14 @@ class ContentHandler:
 def fb2parse(data):
 
     if not data.startswith('<?xml'):
-        print 'Warning: file is not an XML file. Skipped.'
+        print('Warning: file is not an XML file. Skipped.')
         return None
-
+    
     global _parser
 
     # remove invalid chars
-    tab = string.maketrans('', '')
-    data = data.translate(tab, '\07\032')  # XXX: add other invalid chars here
+    tab = str.maketrans('', '')
+    data = data.translate(tab)  # XXX: add other invalid chars here
 
     content_handler = ContentHandler()
 
@@ -195,4 +195,4 @@ if __name__ == '__main__':
     #c = create_content(fn, 80)
     c = fb2parse(file(fn).read())
     #for s, t in c:
-    #    print t, s
+    #    print (t, s)

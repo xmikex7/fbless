@@ -8,18 +8,24 @@ import traceback
 import locale
 import signal
 import zipfile
-from cStringIO import StringIO
+from io import StringIO
 import time
 import curses
 import curses.ascii as ascii
 
-from fb2parser import fb2parse
-from paragraph import attr
-import options
-import const
-from options import convert_color, get_keys
+import chardet
 
+from .fb2parser import fb2parse
+from .paragraph import attr
+from . import options
+from . import const
+from .options import convert_color, get_keys
+
+
+
+locale.setlocale(locale.LC_ALL, 'ru_RU.UTF-8')
 default_charset = locale.getdefaultlocale()[1]
+code = locale.getpreferredencoding()
 
 
 class MainWindow:
@@ -127,7 +133,7 @@ class MainWindow:
             os.makedirs(os.path.dirname(save_file))
         fd = open(save_file, 'w')
         for l in save_pos:
-            print >> fd, ' '.join(l)
+            print(' '.join(l), file=fd)
 
     def init_color(self):
         n = 1
@@ -316,7 +322,7 @@ class MainWindow:
         
         ss = []
         while True:
-            c = self.screen.getch ()
+            c = self.screen.get_wch()
             
             # xterm passes backspace hit as curses.KEY_BACKSPACE,
             # other terminals pass it as ascii.BS or ascii.DEL.
@@ -324,8 +330,8 @@ class MainWindow:
             # Skip any other service symbol, like F1, KEY_UP, etc
             if c == curses.KEY_BACKSPACE:
                 c = ascii.BS
-            elif c > 0xff:
-                continue
+            #elif ord(c) > 0xff:
+                #continue
 
             # In utf8 every multi-byte symbol starts with a byte
             # that encodes the number of symbols. Here is a table:
@@ -341,8 +347,8 @@ class MainWindow:
             # counting from the left hand side is a number of 
             # bytes in a utf8 multi-char.
             byte_count = 0
-            for i in xrange (8):
-                if not bool (c & (1 << (7 - i))):
+            for i in range (8):
+                if not bool (ord(c) & (1 << (7 - i))):
                     byte_count = i;
                     break;
 
@@ -354,19 +360,20 @@ class MainWindow:
 
             c = [c]
             if byte_count >= 2:
-                for i in xrange (byte_count - 1):
-                    c.append (self.screen.getch ())
+                for i in range (byte_count - 1):
+                    c.append (self.screen.get_wch ())
             
             # Create a string from the list of bytes.
-            cc = "".join ([chr (x) for x in  c])
+            cc = "".join (c)
+
 
             # String is done, if user hit ENTER.
-            if cc == chr (ascii.NL):
+            if cc == chr(ascii.NL):
                 break
             
             # In case of backspace, delete the last character
             # or continue if input is empty.
-            if cc in (chr (ascii.DEL), chr (ascii.BS)):
+            if cc in (chr(ascii.DEL), chr(ascii.BS)):
                 if len (ss) == 0:
                     continue
                 ss.pop () 
@@ -377,8 +384,8 @@ class MainWindow:
 
             # Do not save character, if it is something
             # non-printable, like ESC or similar.
-            if len (cc) == 1 and not ascii.isprint (ord (cc)):
-                continue 
+            #if len (cc) == 1 and not ascii.isprint (ord (cc)):
+                #continue 
             
             # Append symbol to the list of symbols and put
             # it on the screen.
@@ -386,7 +393,7 @@ class MainWindow:
             self.screen.addstr (cc)
 
         # Combine characters from list `ss' into a string
-        return "".join (ss)
+        return "".join(ss).encode(code)
 
 
     def search(self):
@@ -398,7 +405,7 @@ class MainWindow:
         self.screen.nodelay(0)
 
         if default_charset == 'UTF-8':
-            s = self.get_utf8_string()
+           s = self.get_utf8_string()
         else:
             curses.echo()
             s = self.screen.getstr()
@@ -406,7 +413,8 @@ class MainWindow:
 
         # Ignore the errors happening when deleting the
         # multi-byte characters.
-        s = unicode(s, default_charset, errors='ignore')
+        
+        s = str(s, encoding=code)
         self.screen.nodelay(1)
         
         if not s:
@@ -443,7 +451,7 @@ class MainWindow:
         self.screen.nodelay(0)
         
         if default_charset == 'UTF-8':
-            s = self.get_utf8_string()
+           s = self.get_utf8_string()
         else:
             curses.echo()
             s = self.screen.getstr()
@@ -451,7 +459,7 @@ class MainWindow:
 
         # Ignore the errors happening when deleting the
         # multi-byte characters.
-        s = unicode(s, default_charset, errors='ignore')
+        s = str(s, encoding=code)
         s = s.encode(default_charset)
         self.update_status = True
         try:
@@ -475,7 +483,7 @@ class MainWindow:
             if id.startswith('#'):
                 id = id[1:]
             else:
-                print 'external link:', id
+                print('external link:', id)
                 return
             i = self.content.get_by_id(id)
             if i is None:
@@ -1063,25 +1071,29 @@ class Content:
         for par in self._content:
             par.lines = []
 
-
 def create_content(filename, scr_cols):
 
     if zipfile.is_zipfile(filename):
         zf = zipfile.ZipFile(filename)
         for zip_filename in zf.namelist():
             data = zf.read(zip_filename)
-            if data.startswith('<?xml'):
+            if data.startswith(str.encode('<?xml')):
                 break
         else:
             sys.exit('zip archive: xml file not found')
     else:
-        data = open(filename).read()
-        if data.startswith('BZh'):
+        data = open(filename,'rb').read()
+        if data.startswith(str.encode('BZh')):
             import bz2
             data = bz2.decompress(data)
-        elif data.startswith('\x1f\x8b'):
+        elif data.startswith(str.encode('\x1f\x8b')):
             import gzip
             data = gzip.GzipFile(fileobj=StringIO(data)).read()
+    
+    enc = chardet.detect(data[0:512])['encoding']
+    
+    data = data.decode(encoding=enc)
+    
     content = fb2parse(data)
 
     return Content(content, scr_cols)
@@ -1096,16 +1108,16 @@ if __name__ == '__main__':
             s, t = c.get(pi, li)
         except IndexError:
             break
-        print t, '>' + s + '<'
+        print (t, '>' + s + '<')
         pi, li = c.indexes()
         li += 1
         i += 1
         if i > 200:
             break
-    print '---------->', pi, li
+    print ('---------->', pi, li)
     s, t = c.get(pi, li - 32)
-    print s
-    print c.indexes()
+    print (s)
+    print (c.indexes())
     #while True:
     #    s, t = c.get(pi, li)
 ##     try:
